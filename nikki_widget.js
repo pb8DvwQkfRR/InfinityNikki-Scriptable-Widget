@@ -2,8 +2,8 @@
  * 无限暖暖小组件
  * 
  * @name        InfinityNikki-Scriptable-Widget
- * @version     0.0.2
- * @date        2025-08-09
+ * @version     0.0.3
+ * @date        2025-08-10
  * 
  * @license     AGPL-3.0
  */
@@ -584,13 +584,10 @@ function addStatusRow(widget, label, currentValue, maxValue, completedText = COM
        textColor = VALUE_COLOR;
      }
   } else {
-    const isComplete = currentValue >= maxValue;
+    const isComplete = currentValue === maxValue;
     if (isComplete) {
       displayText = completedText;
       textColor = COMPLETED_COLOR;
-    } else if (currentValue === 0) {
-      displayText = "未完成";
-      textColor = VALUE_COLOR;
     } else {
       displayText = `${currentValue}/${maxValue}`;
       textColor = VALUE_COLOR;
