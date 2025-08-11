@@ -2,7 +2,7 @@
  * 无限暖暖小组件
  * 
  * @name        InfinityNikki-Scriptable-Widget
- * @version     0.0.4
+ * @version     0.0.5
  * @date        2025-08-11
  * 
  * @license     AGPL-3.0
@@ -228,11 +228,19 @@ function decodeSnappyBase64ToJson(base64Data) {
  * @param {number} serverTimeMs 服务器时间戳(毫秒)
  * @returns {number} 重置时间点的时间戳(毫秒)
  */
-function getResetTimeStamp(serverTimeMs) {
+function getResetTimeStamp(userData, serverTimeMs) {
   const shanghaiTime = new Date(serverTimeMs + (8 * 60 * 60 * 1000));
+  const userTimestamp = userData.timestamp * 1000;
   const resetTime = new Date(shanghaiTime);
   resetTime.setHours(4, 0, 0, 0);
-  return shanghaiTime < resetTime ? resetTime.setDate(resetTime.getDate() - 1) : resetTime.getTime();
+  
+  if (userTimestamp < resetTime) {
+    const yesterdayReset = new Date(resetTime);
+    yesterdayReset.setDate(resetTime.getDate() - 1);
+    return yesterdayReset.getTime();
+  } else {
+    return resetTime.getTime();
+  }
 }
 
 /**
