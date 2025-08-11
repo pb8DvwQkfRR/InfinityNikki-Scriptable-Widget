@@ -2,8 +2,8 @@
  * 无限暖暖小组件
  * 
  * @name        InfinityNikki-Scriptable-Widget
- * @version     0.0.3
- * @date        2025-08-10
+ * @version     0.0.4
+ * @date        2025-08-11
  * 
  * @license     AGPL-3.0
  */
@@ -221,6 +221,44 @@ function decodeSnappyBase64ToJson(base64Data) {
     console.log("Snappy 解码错误: " + error.message);
     return null;
   }
+}
+
+/**
+ * 计算重置时间点
+ * @param {number} serverTimeMs 服务器时间戳(毫秒)
+ * @returns {number} 重置时间点的时间戳(毫秒)
+ */
+function getResetTimeStamp(serverTimeMs) {
+  const shanghaiTime = new Date(serverTimeMs + (8 * 60 * 60 * 1000));
+  const resetTime = new Date(shanghaiTime);
+  resetTime.setHours(4, 0, 0, 0);
+  return shanghaiTime < resetTime ? resetTime.setDate(resetTime.getDate() - 1) : resetTime.getTime();
+}
+
+/**
+ * 计算实际日常进度
+ * @param {Object} userData 用户数据
+ * @param {number} serverTimeMs 服务器时间戳(毫秒)
+ * @returns {number} 实际日常进度
+ */
+function calculateDailyTask(userData, serverTimeMs) {
+  if (!userData) return 0;
+  const userTimestamp = userData.timestamp * 1000;
+  const resetTime = getResetTimeStamp(serverTimeMs);
+  return userTimestamp < resetTime ? 0 : userData.daily_task;
+}
+
+/**
+ * 计算实际星海进度
+ * @param {Object} userData 用户数据
+ * @param {number} serverTimeMs 服务器时间戳(毫秒)
+ * @returns {number} 实际星海进度
+ */
+function calculateStarSea(userData, serverTimeMs) {
+  if (!userData) return 0;
+  const userTimestamp = userData.timestamp * 1000;
+  const resetTime = getResetTimeStamp(serverTimeMs);
+  return userTimestamp < resetTime ? 0 : userData.star_sea;
 }
 
 /**
@@ -667,6 +705,10 @@ async function createWidget() {
     const currentEnergy = calculateActiveEnergy(serverTimeMs, data.timestamp, data.energy);
     const fullEnergyTimeStr = calculateFullEnergyTime(currentEnergy);
 
+    // 计算日常和星海进度
+    const actualDailyTask = calculateDailyTask(data, serverTimeMs);
+    const actualStarSea = calculateStarSea(data, serverTimeMs);
+
     // 检查并发送通知
     await checkAndSendNotifications(nickname, currentEnergy, data.dispatch);
 
@@ -715,10 +757,10 @@ async function createWidget() {
     }
 
     // 日常
-    addStatusRow(widget, "日常:", data.daily_task, 500);
+    addStatusRow(widget, "日常:", actualDailyTask, 500);
 
     // 星海
-    addStatusRow(widget, "星海:", data.star_sea, 500);
+    addStatusRow(widget, "星海:", actualStarSea, 500);
 
     // 周本
     addStatusRow(widget, "周本:", data.weekly_reward_status, null, '已挑战', true, true);
