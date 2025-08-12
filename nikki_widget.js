@@ -2,8 +2,8 @@
  * 无限暖暖小组件
  * 
  * @name        InfinityNikki-Scriptable-Widget
- * @version     0.0.5
- * @date        2025-08-11
+ * @version     0.0.6
+ * @date        2025-08-12
  * 
  * @license     AGPL-3.0
  */
@@ -225,6 +225,7 @@ function decodeSnappyBase64ToJson(base64Data) {
 
 /**
  * 计算重置时间点
+ * @param {Object} userData 用户数据
  * @param {number} serverTimeMs 服务器时间戳(毫秒)
  * @returns {number} 重置时间点的时间戳(毫秒)
  */
@@ -234,7 +235,7 @@ function getResetTimeStamp(userData, serverTimeMs) {
   const resetTime = new Date(shanghaiTime);
   resetTime.setHours(4, 0, 0, 0);
   
-  if (userTimestamp < resetTime) {
+  if (shanghaiTime.getTime() < resetTime.getTime()) {
     const yesterdayReset = new Date(resetTime);
     yesterdayReset.setDate(resetTime.getDate() - 1);
     return yesterdayReset.getTime();
@@ -252,7 +253,7 @@ function getResetTimeStamp(userData, serverTimeMs) {
 function calculateDailyTask(userData, serverTimeMs) {
   if (!userData) return 0;
   const userTimestamp = userData.timestamp * 1000;
-  const resetTime = getResetTimeStamp(serverTimeMs);
+  const resetTime = getResetTimeStamp(userData, serverTimeMs);
   return userTimestamp < resetTime ? 0 : userData.daily_task;
 }
 
@@ -265,7 +266,7 @@ function calculateDailyTask(userData, serverTimeMs) {
 function calculateStarSea(userData, serverTimeMs) {
   if (!userData) return 0;
   const userTimestamp = userData.timestamp * 1000;
-  const resetTime = getResetTimeStamp(serverTimeMs);
+  const resetTime = getResetTimeStamp(userData, serverTimeMs);
   return userTimestamp < resetTime ? 0 : userData.star_sea;
 }
 
