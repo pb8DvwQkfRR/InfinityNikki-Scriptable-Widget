@@ -2,8 +2,8 @@
  * 无限暖暖小组件
  * 
  * @name        InfinityNikki-Scriptable-Widget
- * @version     0.0.6
- * @date        2025-08-12
+ * @version     0.0.7
+ * @date        2025-08-13
  * 
  * @license     AGPL-3.0
  */
@@ -230,18 +230,18 @@ function decodeSnappyBase64ToJson(base64Data) {
  * @returns {number} 重置时间点的时间戳(毫秒)
  */
 function getResetTimeStamp(userData, serverTimeMs) {
-  const shanghaiTime = new Date(serverTimeMs + (8 * 60 * 60 * 1000));
-  const userTimestamp = userData.timestamp * 1000;
-  const resetTime = new Date(shanghaiTime);
-  resetTime.setHours(4, 0, 0, 0);
-  
-  if (shanghaiTime.getTime() < resetTime.getTime()) {
-    const yesterdayReset = new Date(resetTime);
-    yesterdayReset.setDate(resetTime.getDate() - 1);
-    return yesterdayReset.getTime();
-  } else {
-    return resetTime.getTime();
-  }
+  const now = new Date(serverTimeMs);
+  const localHour = parseInt(
+    now.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour: "2-digit", hour12: false })
+  );
+
+  const resetHour = 4;
+  const localNow = new Date(now.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" }));
+  const resetToday = new Date(localNow);
+  resetToday.setHours(resetHour, 0, 0, 0);
+
+  const lastReset = localHour >= resetHour ? resetToday : new Date(resetToday.getTime() - 24 * 3600 * 1000);
+  return lastReset.getTime();
 }
 
 /**
@@ -401,7 +401,7 @@ async function fetchNikkiData(requestData) {
     return result.info_from_gm;
     
   } catch (error) {
-    console.error("❌ 获取游戏数据失败:", error.message);
+    console.log("❌ 获取游戏数据失败: " + error.message);
     throw error;
   }
 }
@@ -435,7 +435,7 @@ async function getUserInfo(requestData) {
       };
     }
   } catch (e) {
-    console.error("获取用户信息失败:", e);
+    console.error("获取用户信息失败:" + e);
   }
   return { nickname: null, avatar: null, level: null };
 }
@@ -564,7 +564,7 @@ async function checkAndSendNotifications(nickname, currentEnergy, dispatchTasks)
       await scheduleNotification(notificationData);
     }
   } catch (error) {
-    console.error("❌ 检查或发送通知时出错:", error);
+    console.error("❌ 检查或发送通知时出错:" + error);
   }
 }
 
@@ -585,7 +585,7 @@ async function clearExistingNotifications() {
       await Notification.removePending(toRemove);
     }
   } catch (error) {
-    console.error("❌ 清理通知时出错:", error);
+    console.error("❌ 清理通知时出错:" + error);
   }
 }
 
@@ -606,7 +606,7 @@ async function scheduleNotification(notificationData) {
     
     await notification.schedule();
   } catch (error) {
-    console.error(`❌ 安排通知 ${notificationData.id} 失败:`, error);
+    console.error("❌ 安排通知失败:" + error);
   }
 }
 
@@ -741,7 +741,7 @@ async function createWidget() {
         const backgroundImage = scrim.getImage();
         widget.backgroundImage = backgroundImage;
       } catch (e) {
-        console.error("加载或处理头像失败:", e);
+        console.error("加载或处理头像失败:" + e);
       }
     }
     widget.setPadding(10, 10, 10, 10);
@@ -848,7 +848,7 @@ async function createWidget() {
     return widget;
   } catch (err) {
     // 错误处理 - 返回错误提示小组件
-    console.error("创建小组件时发生错误:", err);
+    console.log("创建小组件时发生错误:" + err);
     const widget = new ListWidget();
     widget.backgroundColor = DARK_BG;
     widget.setPadding(12, 12, 12, 12);
@@ -903,7 +903,7 @@ if (config.runsInWidget) {
   try {
     Script.setWidget(await createWidget());
   } catch (e) {
-    console.error("设置小组件时发生未捕获的错误:", e);
+    console.error("设置小组件时发生未捕获的错误:" + e);
   }
 } else {
   // 在主应用环境中运行（用于预览或管理）
