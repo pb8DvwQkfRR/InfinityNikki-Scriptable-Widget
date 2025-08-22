@@ -2,8 +2,8 @@
  * 无限暖暖小组件
  * 
  * @name        InfinityNikki-Scriptable-Widget
- * @version     0.0.7
- * @date        2025-08-13
+ * @version     0.0.8
+ * @date        2025-08-22
  * 
  * @license     AGPL-3.0
  */
@@ -670,15 +670,19 @@ async function createWidget() {
       console.warn("读取 Keychain 时发生错误:", e);
     }
 
-    // 如果没有凭据，引导用户登录
+    // 在小组件环境中不要尝试登录
     if (!storedToken || !storedOpenid) {
-       try {
-         await promptLogin();
-         storedToken = Keychain.get(KEY_MOMO_TOKEN);
-         storedOpenid = Keychain.get(KEY_MOMO_NID);
-       } catch (loginError) {
-         throw loginError;
-       }
+      if (config.runsInWidget) {
+        throw new Error("登录已过期，请在Scriptable中重新登录");
+      } else {
+        try {
+          await promptLogin();
+          storedToken = Keychain.get(KEY_MOMO_TOKEN);
+          storedOpenid = Keychain.get(KEY_MOMO_NID);
+        } catch (loginError) {
+          throw loginError;
+        }
+      }
     }
 
     // 检查凭据有效性
@@ -691,7 +695,25 @@ async function createWidget() {
       throw new Error("无法获取有效的认证凭据");
     }
 
-    const data = await fetchNikkiData(requestData);
+    let data;
+    try {
+      data = await fetchNikkiData(requestData);
+    } catch (error) {
+      if (error.message === "需要重新登录") {
+        if (config.runsInWidget) {
+          try {
+            Keychain.remove(KEY_MOMO_NID);
+            Keychain.remove(KEY_MOMO_TOKEN);
+          } catch (e) {
+            console.log("清除过期凭据时出错:", e);
+          }
+          throw new Error("登录已过期，请在Scriptable中重新登录");
+        } else {
+          throw error;
+        }
+      }
+      throw error;
+    }
 
     // 获取服务器时间（用于体力计算）
     let serverTimeMs;
@@ -875,15 +897,13 @@ async function createWidget() {
         const hint = widget.addText("请稍后重试或检查网络连接");
         hint.font = Font.systemFont(12);
         hint.textColor = TIME_COLOR;
-    } else if (err.message.includes("需要重新登录")) {
+    } else if (err.message.includes("登录已过期") || err.message.includes("请在Scriptable中")) {
         const hint1 = widget.addText("登录状态已过期");
-        const hint2 = widget.addText("请重新运行脚本登录");
+        const hint2 = widget.addText("请在Scriptable中重新登录");
         hint1.font = Font.systemFont(12);
         hint1.textColor = TIME_COLOR;
         hint2.font = Font.systemFont(11);
         hint2.textColor = TIME_COLOR;
-        Keychain.remove(KEY_MOMO_NID);
-        Keychain.remove(KEY_MOMO_TOKEN);
     } else if (err.message.includes("Snappy")) {
         const hint1 = widget.addText("数据解析失败");
         const hint2 = widget.addText("请检查网络连接");
