@@ -492,10 +492,8 @@ async function checkAndSendNotifications(nickname, currentEnergy, dispatchTasks)
 
     const notificationsToSend = [];
     const now = new Date();
-    const FIVE_MINUTES_MS = 5 * 60 * 1000;
-    const ONE_MINUTE_MS = 1 * 60 * 1000;
-    const ONE_HOUR_MS = 60 * 60 * 1000;
-    const THIRTY_SECONDS_MS = 30 * 1000;
+    const TEN_MINUTES_MS = 5 * 60 * 1000;
+    const TWO_MINUTE_MS = 2 * 60 * 1000;
 
     // 检查体力
     const needEnergy = MAX_ENERGY - currentEnergy;
@@ -503,24 +501,24 @@ async function checkAndSendNotifications(nickname, currentEnergy, dispatchTasks)
       const fullMs = needEnergy * MINUTES_PER_ENERGY * 60 * 1000;
       const fullTime = new Date(now.getTime() + fullMs);
 
-      if (fullMs > FIVE_MINUTES_MS) {
-        const triggerTime = new Date(fullTime.getTime() - ONE_HOUR_MS);
+      if (fullMs > TEN_MINUTES_MS) {
+        const triggerTime = new Date(fullTime.getTime() - TEN_MINUTES_MS);
         if (triggerTime > now) {
           notificationsToSend.push({
-            id: "energy_5m",
-            title: `亲爱的搭配师 ${nickname}`,
-            body: "体力将在5分钟内回满，请及时清理～",
+            id: "energy_10m",
+            title: `亲爱的搭配师 ${nickname} ❤️`,
+            body: "体力将在10分钟内回满，请及时清理～",
             triggerTime: triggerTime
           });
         }
       }
 
-      if (fullMs > ONE_MINUTE_MS) {
-        const triggerTime = new Date(fullTime.getTime() - THIRTY_SECONDS_MS);
+      if (fullMs > TWO_MINUTE_MS) {
+        const triggerTime = new Date(fullTime.getTime() - TWO_MINUTE_MS);
         if (triggerTime > now) {
           notificationsToSend.push({
-            id: "energy_1m",
-            title: `亲爱的搭配师 ${nickname}`,
+            id: "energy_2m",
+            title: `亲爱的搭配师 ${nickname} ❤️`,
             body: "体力即将回满，请及时清理～",
             triggerTime: triggerTime
           });
@@ -537,24 +535,24 @@ async function checkAndSendNotifications(nickname, currentEnergy, dispatchTasks)
       const remainingMs = endTime.getTime() - now.getTime();
 
       if (remainingMs > 0) {
-        if (remainingMs > FIVE_MINUTES_MS) {
-          const triggerTime = new Date(endTime.getTime() - ONE_HOUR_MS);
+        if (remainingMs > TEN_MINUTES_MS) {
+          const triggerTime = new Date(endTime.getTime() - TEN_MINUTES_MS);
           if (triggerTime > now) {
             notificationsToSend.push({
-              id: "dig_5m",
-              title: `亲爱的搭配师 ${nickname}`,
-              body: "挖掘将在5分钟内完成，请及时收获～",
+              id: "dig_10m",
+              title: `亲爱的搭配师 ${nickname} ❤️`,
+              body: "挖掘将在10分钟内完成，请及时收获～",
               triggerTime: triggerTime
             });
           }
         }
 
-        if (remainingMs > ONE_MINUTE_MS) {
-          const triggerTime = new Date(endTime.getTime() - THIRTY_SECONDS_MS);
+        if (remainingMs > TWO_MINUTE_MS) {
+          const triggerTime = new Date(endTime.getTime() - TWO_MINUTE_MS);
           if (triggerTime > now) {
             notificationsToSend.push({
-              id: "dig_1m",
-              title: `亲爱的搭配师 ${nickname}`,
+              id: "dig_2m",
+              title: `亲爱的搭配师 ${nickname} ❤️`,
               body: "挖掘即将完成，请及时收获～",
               triggerTime: triggerTime
             });
