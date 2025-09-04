@@ -2,8 +2,8 @@
  * 无限暖暖小组件
  * 
  * @name        InfinityNikki-Scriptable-Widget
- * @version     0.0.8
- * @date        2025-08-22
+ * @version     0.0.9
+ * @date        2025-09-04
  * 
  * @license     AGPL-3.0
  */
@@ -54,7 +54,7 @@ function unbase64(base64) {
     if (charMap.hasOwnProperty(char)) {
       buffer = (buffer << 6) | charMap[char];
       bitsCollected += 6;
-      
+  
       if (bitsCollected >= 8) {
         binaryString.push((buffer >>> (bitsCollected - 8)) & 0xFF);
         bitsCollected -= 8;
@@ -181,7 +181,7 @@ function decodeUTF8(bytes) {
   
   while (i < bytes.length) {
     let byte1 = bytes[i++];
-    
+
     if (byte1 < 0x80) {
       str += String.fromCharCode(byte1);
     } else if ((byte1 & 0xE0) === 0xC0) {
@@ -199,7 +199,7 @@ function decodeUTF8(bytes) {
       let byte3 = bytes[i++];
       let byte4 = bytes[i++];
       let codePoint = ((byte1 & 0x07) << 18) | ((byte2 & 0x3F) << 12) | ((byte3 & 0x3F) << 6) | (byte4 & 0x3F);
-      
+  
       codePoint -= 0x10000;
       str += String.fromCharCode(0xD800 + (codePoint >>> 10));
       str += String.fromCharCode(0xDC00 + (codePoint & 0x3FF));
@@ -339,38 +339,38 @@ async function fetchNikkiData(requestData) {
   try {
     //uncomment this while debugging
     //console.log("NIKKI_API_URL: " + NIKKI_API_URL);
-    
+
     const req = new Request(NIKKI_API_URL);
     req.method = "POST";
     req.headers = {
       "Cookie": `momoToken=${requestData.token}; momoNid=${requestData.openid}`,
       "Content-Type": "application/json"
     };
-    
+
     const bodyData = {
       client_id: 1106,
       token: requestData.token,
       openid: requestData.openid
     };
     req.body = JSON.stringify(bodyData);
-    
+
     const rawData = await req.load();
     //uncomment this while debugging
     //console.log("statusCode: " + req.response?.statusCode);
-    
+
     const base64Data = rawData.toBase64String();
     //uncomment this while debugging
     //console.log("base64Data: " + base64Data);
-    
+
     if (base64Data.length === 0) {
       throw new Error("API 返回空响应");
     }
-    
+
     try {
       const directData = Data.fromBase64String(base64Data);
       const rawString = directData.toRawString();
       const directJson = JSON.parse(rawString);
-      
+  
       if (directJson.code && directJson.code !== 0) {
         if (directJson.code === 1801 && directJson.info === "need login.") {
           throw new Error("需要重新登录");
@@ -382,24 +382,24 @@ async function fetchNikkiData(requestData) {
         throw jsonError;
       }
     }
-    
+
     // Snappy 解码
     const result = decodeSnappyBase64ToJson(base64Data);
-    
+
     if (!result) {
       throw new Error("Snappy 解码失败");
     }
-    
+
     if (result.flag && result.flag !== 0) {
       throw new Error(`API 返回错误, Flag: ${result.flag}`);
     }
-    
+
     if (!result.info_from_gm) {
       throw new Error("API 响应缺少数据");
     }
-    
+
     return result.info_from_gm;
-    
+
   } catch (error) {
     console.log("❌ 获取游戏数据失败: " + error.message);
     throw error;
@@ -489,35 +489,39 @@ function calculateFullEnergyTime(currentEnergy) {
 async function checkAndSendNotifications(nickname, currentEnergy, dispatchTasks) {
   try {
     await clearExistingNotifications();
-    
+
     const notificationsToSend = [];
     const now = new Date();
+    const FIVE_MINUTES_MS = 5 * 60 * 1000;
+    const ONE_MINUTE_MS = 1 * 60 * 1000;
+    const ONE_HOUR_MS = 60 * 60 * 1000;
+    const THIRTY_SECONDS_MS = 30 * 1000;
 
     // 检查体力
     const needEnergy = MAX_ENERGY - currentEnergy;
     if (needEnergy > 0) {
-      const fullMinutes = needEnergy * MINUTES_PER_ENERGY;
-      const fullTime = new Date(now.getTime() + fullMinutes * 60 * 1000);
-      
-      if (fullMinutes > 60) {
-        const triggerTime = new Date(fullTime.getTime() - 60 * 60 * 1000);
+      const fullMs = needEnergy * MINUTES_PER_ENERGY * 60 * 1000;
+      const fullTime = new Date(now.getTime() + fullMs);
+
+      if (fullMs > FIVE_MINUTES_MS) {
+        const triggerTime = new Date(fullTime.getTime() - ONE_HOUR_MS);
         if (triggerTime > now) {
           notificationsToSend.push({
-            id: "energy_1h",
+            id: "energy_5m",
             title: `亲爱的搭配师 ${nickname}`,
-            body: "体力将在1小时内回满，请及时清理～",
+            body: "体力将在5分钟内回满，请及时清理～",
             triggerTime: triggerTime
           });
         }
       }
-      
-      if (fullMinutes > 30) {
-        const triggerTime = new Date(fullTime.getTime() - 30 * 60 * 1000);
+
+      if (fullMs > ONE_MINUTE_MS) {
+        const triggerTime = new Date(fullTime.getTime() - THIRTY_SECONDS_MS);
         if (triggerTime > now) {
           notificationsToSend.push({
-            id: "energy_30m",
+            id: "energy_1m",
             title: `亲爱的搭配师 ${nickname}`,
-            body: "体力将在30分钟内回满，请及时清理～",
+            body: "体力即将回满，请及时清理～",
             triggerTime: triggerTime
           });
         }
@@ -529,29 +533,29 @@ async function checkAndSendNotifications(nickname, currentEnergy, dispatchTasks)
       const task = dispatchTasks[0];
       const hoursMap = { 1: 4, 2: 8, 3: 12, 4: 20 };
       const hours = hoursMap.hasOwnProperty(task.spend_time) ? hoursMap[task.spend_time] : task.spend_time;
-      const endTime = new Date(task.start_time * 1000 + hours * 3600000);
+      const endTime = new Date(task.start_time * 1000 + hours * 60 * 60 * 1000);
       const remainingMs = endTime.getTime() - now.getTime();
 
       if (remainingMs > 0) {
-        if (remainingMs > 60 * 60 * 1000) {
-          const triggerTime = new Date(endTime.getTime() - 60 * 60 * 1000);
+        if (remainingMs > FIVE_MINUTES_MS) {
+          const triggerTime = new Date(endTime.getTime() - ONE_HOUR_MS);
           if (triggerTime > now) {
             notificationsToSend.push({
-              id: "dig_1h",
+              id: "dig_5m",
               title: `亲爱的搭配师 ${nickname}`,
-              body: "挖掘将在1小时内完成，请及时收获～",
+              body: "挖掘将在5分钟内完成，请及时收获～",
               triggerTime: triggerTime
             });
           }
         }
-        
-        if (remainingMs > 30 * 60 * 1000) {
-          const triggerTime = new Date(endTime.getTime() - 30 * 60 * 1000);
+
+        if (remainingMs > ONE_MINUTE_MS) {
+          const triggerTime = new Date(endTime.getTime() - THIRTY_SECONDS_MS);
           if (triggerTime > now) {
             notificationsToSend.push({
-              id: "dig_30m",
+              id: "dig_1m",
               title: `亲爱的搭配师 ${nickname}`,
-              body: "挖掘将在30分钟内完成，请及时收获～",
+              body: "挖掘即将完成，请及时收获～",
               triggerTime: triggerTime
             });
           }
@@ -573,13 +577,13 @@ async function clearExistingNotifications() {
   try {
     const pendingNotifications = await Notification.allPending();
     const toRemove = [];
-    
+
     for (const notification of pendingNotifications) {
       if (notification.threadIdentifier === NOTIFICATION_THREAD_ID) {
         toRemove.push(notification.identifier);
       }
     }
-    
+
     // 移除预约
     if (toRemove.length > 0) {
       await Notification.removePending(toRemove);
@@ -601,9 +605,9 @@ async function scheduleNotification(notificationData) {
     notification.body = notificationData.body;
     notification.threadIdentifier = NOTIFICATION_THREAD_ID;
     notification.sound = NOTIFICATION_SOUND;
-    
+
     notification.setTriggerDate(notificationData.triggerTime);
-    
+
     await notification.schedule();
   } catch (error) {
     console.error("❌ 安排通知失败:" + error);
