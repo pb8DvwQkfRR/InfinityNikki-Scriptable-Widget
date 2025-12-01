@@ -2,7 +2,7 @@
  * 无限暖暖小组件
  * 
  * @name        InfinityNikki-Scriptable-Widget
- * @version     0.1.0
+ * @version     0.1.1
  * @date        2025-12-01
  * 
  * @license     AGPL-3.0
@@ -51,7 +51,7 @@ async function loadCryptoLibrary() {
     const libPath = fm.joinPath(fm.documentsDirectory(), "crypto-js.min.js");
 
     if (!fm.fileExists(libPath)) {
-        const req = new Request("https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/index.min.js");
+        const req = new Request("https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js");
         try {
             const jsContent = await req.load();
             fm.write(libPath, jsContent);
