@@ -2,7 +2,7 @@
  * 无限暖暖小组件
  * 
  * @name        InfinityNikki-Scriptable-Widget
- * @version     0.1.1
+ * @version     0.1.2
  * @date        2025-12-01
  * 
  * @license     AGPL-3.0
@@ -13,7 +13,7 @@ const MAX_ENERGY = 350;
 const MINUTES_PER_ENERGY = 5;
 const TEXT_FONT = Font.systemFont(12);
 const TIME_FONT = Font.regularMonospacedSystemFont(10);
-const REFRESH_INTERVAL_MINUTES = 30;
+const REFRESH_INTERVAL_MINUTES = 10;
 const REFRESH_INTERVAL_MS = REFRESH_INTERVAL_MINUTES * 60 * 1000;
 
 // === 通知常量 ===
@@ -50,7 +50,11 @@ async function loadCryptoLibrary() {
     const fm = FileManager.local();
     const libPath = fm.joinPath(fm.documentsDirectory(), "crypto-js.min.js");
 
-    if (!fm.fileExists(libPath)) {
+    if (!fm.fileExists(libPath) || fm.fileSize(libPath) < 100) {
+        if (fm.fileExists(libPath)) {
+            try { fm.remove(libPath); } catch(e) {}
+        }
+        
         const req = new Request("https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js");
         try {
             const jsContent = await req.load();
@@ -65,9 +69,9 @@ async function loadCryptoLibrary() {
         return module;
     } catch (e) {
         if (fm.fileExists(libPath)) {
-            fm.remove(libPath);
+            try { fm.remove(libPath); } catch(err) {}
         }
-        throw new Error("加载库失败，请重新运行脚本: " + e.message);
+        throw new Error("库文件损坏已自动删除，请重新运行脚本: " + e.message);
     }
 }
 
@@ -465,7 +469,7 @@ async function promptLogin() {
 
     const response = await alert.present();
     if (response === -1) {
-        throw new Error("用户取消登录");
+        return null;
     }
 
     const account = alert.textFieldValue(0);
@@ -511,8 +515,7 @@ async function fetchNikkiData(requestData) {
         const req = new Request(NIKKI_API_URL);
         req.method = "POST";
         req.headers = {
-            "Cookie": `momoToken = ${requestData.token};
-            momoNid = ${requestData.openid}`,
+            "Cookie": `momoToken=${requestData.token}; momoNid=${requestData.openid}`,
             "Content-Type": "application/json"
         };
 
@@ -655,7 +658,7 @@ async function checkAndSendNotifications(nickname, currentEnergy, dispatchTasks)
         await clearExistingNotifications();
         const notificationsToSend = [];
         const now = new Date();
-        const TEN_MINUTES_MS = 5 * 60 * 1000;
+        const TEN_MINUTES_MS = 10 * 60 * 1000;
         const TWO_MINUTE_MS = 2 * 60 * 1000;
 
         // 检查体力
@@ -835,7 +838,10 @@ async function createWidget() {
             if (config.runsInWidget) {
                 throw new Error("登录已过期，请在Scriptable中重新登录");
             } else {
-                await promptLogin();
+                const loginSuccess = await promptLogin();
+                if (!loginSuccess) {
+                    throw new Error("已取消登录"); 
+                }
                 storedToken = Keychain.get(KEY_MOMO_TOKEN);
                 storedOpenid = Keychain.get(KEY_MOMO_NID);
                 // 获取 refresh token
