@@ -121,7 +121,6 @@ class PaperGamesClient {
         const queryList = [];
         for (const key of keys) {
             let val = String(params[key]);
-            // JS 的 encodeURIComponent 类似于 Python 的 quote，但需要处理 * 号
             let encodedVal = encodeURIComponent(val).replace(/\*/g, '%2A');
             queryList.push(`${key}=${encodedVal}`);
         }
